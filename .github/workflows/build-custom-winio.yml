@@ -1,0 +1,33 @@
+name: build-custom-winio
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: custom-winio-x64
+      - name: Build WinIOv2 binaries
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Path artifacts
+          $features = 'win_manifest,win_sendinput_send_scancodes,win_llhook_read_scancodes'
+          cargo build --release --features $features --target x86_64-pc-windows-msvc
+          Copy-Item target/x86_64-pc-windows-msvc/release/kanata.exe artifacts/kanata_def6432_tty_winIOv2_x64.exe
+          cargo build --release --features "gui,$features" --target x86_64-pc-windows-msvc
+          Copy-Item target/x86_64-pc-windows-msvc/release/kanata.exe artifacts/kanata_def6432_gui_winIOv2_x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kanata-def6432-winio-x64
+          path: artifacts/*.exe
